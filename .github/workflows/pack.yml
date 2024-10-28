@@ -17,9 +17,9 @@ jobs:
           - rid: win-x64
             os: windows-latest
           - rid: osx-x64
-            os: macOS-12
+            os: macOS-14
           - rid: osx-arm64
-            os: macOS-12
+            os: macOS-14
 
     steps:
       - uses: actions/checkout@v4
