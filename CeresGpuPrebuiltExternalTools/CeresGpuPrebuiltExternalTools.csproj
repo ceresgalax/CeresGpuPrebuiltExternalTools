@@ -7,7 +7,7 @@
         <TargetFramework>net8.0</TargetFramework>
         <SkipCopyBuildProject>false</SkipCopyBuildProject> <!-- We need to copy things! -->
 
-<!--        <NoWarn>$(NoWarn);NU5128</NoWarn> &lt;!&ndash; We have no .NET in this package, but we're forced to declare a TargetFramework. &ndash;&gt;-->
+        <NoWarn>$(NoWarn);NU5128</NoWarn> <!-- We have no .NET in this package, but we're forced to declare a TargetFramework. -->
         
         <PackageId>CeresGpuPrebuiltExternalTools</PackageId>
         <PackageProjectUrl>https://github.com/ceresgalax/CeresGpuPrebuiltExternalTools</PackageProjectUrl>
@@ -17,20 +17,30 @@
     <PropertyGroup>
         <ProcessorCount>$([System.Environment]::ProcessorCount)</ProcessorCount>
     </PropertyGroup>
-
-    <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))" >
+    
+    <!-- By defualt, only build the rid that matches the host. -->
+    <PropertyGroup Condition="'$(RidsToBuild)' == ''">
+        <CurrentOs Condition="$([MSBuild]::IsOSPlatform('Windows'))">win</CurrentOs>
+        <CurrentOs Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</CurrentOs>
+        <CurrentArch>$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLower())</CurrentArch>
+        <RidsToBuild>$(CurrentOs)-$(CurrentArch)</RidsToBuild>
+    </PropertyGroup>
+    <PropertyGroup>
+        <!-- Surround by semicolons so that we can check which rid items can be included below. -->
+        <RidsToBuild>;$(RidsToBuild);</RidsToBuild>
+    </PropertyGroup>
+    
+    <ItemGroup>
         <BuildableRid Include="win-x64">
             <BuildOutputDir>$(Configuration)\</BuildOutputDir>
             <ExecutableExtension>.exe</ExecutableExtension>
         </BuildableRid>
-    </ItemGroup>
-    <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))" >
         <BuildableRid Include="osx-x64;osx-arm64">
             <BuildOutputDir />
             <ExecutableExtension />
         </BuildableRid>
     </ItemGroup>
-
+    
     <PropertyGroup>
         <DepsDirectory>$(MSBuildThisFileDirectory)..\</DepsDirectory>
         <GlslangSourceDir>$(DepsDirectory)glslang\</GlslangSourceDir>
@@ -66,14 +76,26 @@
         <!-- Additional binaries to package can be listed here -->
     </ItemGroup>
     
-    <ItemGroup>
-        <GlslangOutputFile Include="@(GlslangBinary)">
-            <FilenameToCopy>%(GlslangOutputFile.Identity)@(BuildableRid -> '%(ExecutableExtension)')</FilenameToCopy>
-            <TaskOutput>@(BuildableRid -> '$(MSBuildThisFileDirectory)runtimes\%(Identity)')\native\%(FilenameToCopy)</TaskOutput>
-            <Rid>@(BuildableRid)</Rid>
-        </GlslangOutputFile>
-    </ItemGroup>
-
+    <Target Name="_ComputeGlslangOutputFiles" BeforeTargets="MakeGlslangSingular">
+        <ItemGroup>
+            <!-- This needs to be done inside of a task, so that the task can run for each element of the factor item. -->
+            <!-- MSBuild quirk.. In order to do a cartesian product of GlslangBinary x BuildableRid, each metadata must only contain the factor item. Obvious, right? :) -->
+            <GlslangOutputFileCombined Include="@(GlslangBinary)">
+                <ExecutableExtension>%(BuildableRid.ExecutableExtension)</ExecutableExtension>
+                <Rid>%(BuildableRid.Identity)</Rid>
+                <OutputConfigurationDir>%(BuildableRid.BuildOutputDir)</OutputConfigurationDir>
+            </GlslangOutputFileCombined>
+        </ItemGroup>
+        
+        <ItemGroup>
+            <GlslangOutputFile Include="@(GlslangOutputFileCombined)" Condition="$(RidsToBuild.Contains(';%(Rid);'))">
+                <FilenameToCopy>%(Identity)%(ExecutableExtension)</FilenameToCopy>
+                <TaskOutput>$(MSBuildThisFileDirectory)runtimes\%(Rid)\native\%(GlslangOutputFile.FilenameToCopy)</TaskOutput>
+                <InternalOutputDir>StandAlone\%(OutputConfigurationDir)</InternalOutputDir>
+            </GlslangOutputFile>
+        </ItemGroup>
+    </Target>
+    
     <Target Name="MakeGlslangSingular"
             Inputs="@(GlslangSrcFile)"
             Outputs="@(GlslangOutputFile -> '%(TaskOutput)')"
@@ -81,7 +103,7 @@
         <PropertyGroup>
             <ThisRid>%(GlslangOutputFile.Rid)</ThisRid>
             <BuildDir>$(IntermediateOutputPath)glslang\</BuildDir>
-            <BuildOutputDir>$(BuildDir)%(GlslangOutputFile.Identity)\StandAlone\%(BuildableRid.BuildOutputDir)</BuildOutputDir>
+            <BuildOutputDir>$(BuildDir)%(GlslangOutputFile.InternalOutputDir)</BuildOutputDir>
         </PropertyGroup>
         
         <PropertyGroup>
@@ -97,12 +119,13 @@
 
         <MakeDir Directories="runtimes\$(ThisRid)\native\" />
         <Copy
-            SourceFiles="$(BuildOutputDir)%(GlslangOutputFile.FilenameToCopy)"
+            SourceFiles="@(GlslangOutputFile -> '$(BuildOutputDir)%(FilenameToCopy)')"
             DestinationFiles="%(GlslangOutputFile.TaskOutput)"
         />
 
         <ItemGroup>
             <FileWrites Include="$(BuildDir)\**\*" />
+            <FileWrites Include="%(GlslangOutputFile.TaskOutput)" />
         </ItemGroup>
     </Target>
 
@@ -113,13 +136,25 @@
         <!-- Additional binaries to package can be listed here -->
     </ItemGroup>
 
-    <ItemGroup>
-        <SpirVCrossOutputFile Include="@(SpirVCrossBinary)" Visible="False" >
-            <FilenameToCopy>%(SpirVCrossOutputFile.Identity)@(BuildableRid -> '%(ExecutableExtension)')</FilenameToCopy>
-            <TaskOutput>@(BuildableRid -> '$(MSBuildThisFileDirectory)runtimes\%(Identity)')\native\%(FilenameToCopy)</TaskOutput>
-            <Rid>@(BuildableRid)</Rid>
-        </SpirVCrossOutputFile>
-    </ItemGroup>
+    <Target Name="_ComputeSpirVCrossOutputFiles" BeforeTargets="MakeSpirVCrossSingular">
+        <ItemGroup>
+            <!-- This needs to be done inside of a task, so that the task can run for each element of the factor item. -->
+            <!-- MSBuild quirk.. In order to do a cartesian product of GlslangBinary x BuildableRid, each metadata must only contain the factor item. Obvious, right? :) -->
+            <SpirVCrossOutputFileCombined Include="@(SpirVCrossBinary)">
+                <ExecutableExtension>%(BuildableRid.ExecutableExtension)</ExecutableExtension>
+                <Rid>%(BuildableRid.Identity)</Rid>
+                <OutputConfigurationDir>%(BuildableRid.BuildOutputDir)</OutputConfigurationDir>
+            </SpirVCrossOutputFileCombined>
+        </ItemGroup>
+
+        <ItemGroup>
+            <SpirVCrossOutputFile Include="@(SpirVCrossOutputFileCombined)" Condition="$(RidsToBuild.Contains(';%(Rid);'))">
+                <FilenameToCopy>%(Identity)%(ExecutableExtension)</FilenameToCopy>
+                <TaskOutput>$(MSBuildThisFileDirectory)runtimes\%(Rid)\native\%(SpirVCrossOutputFile.FilenameToCopy)</TaskOutput>
+                <InternalOutputDir>%(OutputConfigurationDir)</InternalOutputDir>
+            </SpirVCrossOutputFile>
+        </ItemGroup>
+    </Target>
 
     <Target Name="MakeSpirVCrossSingular"
             Inputs="@(SpirVCrossSrc)"
@@ -127,8 +162,8 @@
     >
         <PropertyGroup>
             <ThisRid>%(SpirVCrossOutputFile.Rid)</ThisRid>
-            <BuildDir>$(IntermediateOutputPath)SPIRV-Cross</BuildDir>
-            <BuildOutputDir>$(BuildDir)\%(SpirVCrossOutputFile.Identity)\%(BuildableRid.BuildOutputDir)</BuildOutputDir>
+            <BuildDir>$(IntermediateOutputPath)SPIRV-Cross\</BuildDir>
+            <BuildOutputDir>$(BuildDir)%(SpirVCrossOutputFile.InternalOutputDir)</BuildOutputDir>
         </PropertyGroup>
 
         <PropertyGroup>
@@ -144,12 +179,13 @@
 
         <MakeDir Directories="runtimes\$(ThisRid)\native\" />
         <Copy
-            SourceFiles="$(BuildOutputDir)%(SpirVCrossOutputFile.FilenameToCopy)"
+            SourceFiles="@(SpirVCrossOutputFile -> '$(BuildOutputDir)%(FilenameToCopy)')"
             DestinationFiles="%(SpirVCrossOutputFile.TaskOutput)"
         />
         
         <ItemGroup>
             <FileWrites Include="$(BuildDir)\**\*" />
+            <FileWrites Include="%(SpirVCrossOutputFile.TaskOutput)" />
         </ItemGroup>
     </Target>
 
