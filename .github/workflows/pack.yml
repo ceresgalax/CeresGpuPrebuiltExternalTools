@@ -41,7 +41,7 @@ jobs:
         shell: bash
         run: |
           rm -r CeresGpuPrebuiltExternalTools/runtimes
-          dotnet pack -c Release 
+          dotnet build -c Release
 
       - name: Upload Binary as Artifact
         uses: actions/upload-artifact@v3.1.1
