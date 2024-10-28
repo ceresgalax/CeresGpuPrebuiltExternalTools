@@ -1,0 +1,169 @@
+﻿<Project Sdk="Microsoft.Build.NoTargets/3.7.56">
+
+    <Import Project="$(MSBuildThisFileDirectory)FindPythonTask.targets" />
+    
+    <PropertyGroup>
+        <!-- Needs a TargetFramework even though we aren't building any .NET assemblies. -->
+        <TargetFramework>net8.0</TargetFramework>
+        <SkipCopyBuildProject>false</SkipCopyBuildProject> <!-- We need to copy things! -->
+
+<!--        <NoWarn>$(NoWarn);NU5128</NoWarn> &lt;!&ndash; We have no .NET in this package, but we're forced to declare a TargetFramework. &ndash;&gt;-->
+        
+        <PackageId>CeresGpuPrebuiltExternalTools</PackageId>
+        <PackageProjectUrl>https://github.com/ceresgalax/CeresGpuPrebuiltExternalTools</PackageProjectUrl>
+        <Version>1.0</Version>
+    </PropertyGroup>
+    
+    <PropertyGroup>
+        <ProcessorCount>$([System.Environment]::ProcessorCount)</ProcessorCount>
+    </PropertyGroup>
+
+    <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))" >
+        <BuildableRid Include="win-x64">
+            <BuildOutputDir>$(Configuration)\</BuildOutputDir>
+            <ExecutableExtension>.exe</ExecutableExtension>
+        </BuildableRid>
+    </ItemGroup>
+    <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))" >
+        <BuildableRid Include="osx-x64;osx-arm64">
+            <BuildOutputDir />
+            <ExecutableExtension />
+        </BuildableRid>
+    </ItemGroup>
+
+    <PropertyGroup>
+        <DepsDirectory>$(MSBuildThisFileDirectory)..\</DepsDirectory>
+        <GlslangSourceDir>$(DepsDirectory)glslang\</GlslangSourceDir>
+        <SpirVCrossSourceDir>$(DepsDirectory)SPIRV-Cross\</SpirVCrossSourceDir>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <GlslangKnownGoodInput Include="$(GlslangSourceDir)*.json"/>
+        <GlslangKnownGoodInput Include="$(GlslangSourceDir)update_glslang_sources.py"/>
+    </ItemGroup>
+
+    <Target Name="UpdateGlslangExternalSources"
+            Inputs="@(GlslangKnownGoodInput)"
+            Outputs="$(IntermediateOutputPath)\glslang\update_sources.receipt"
+            BeforeTargets="MakeGlslangSingular"
+    >
+        <FindPythonTask>
+            <Output TaskParameter="PythonPath" PropertyName="Python" />
+        </FindPythonTask>
+        <Exec WorkingDirectory="$(GlslangSourceDir)" Command="$(Python) update_glslang_sources.py" />
+
+        <MakeDir Directories="$(IntermediateOutputPath)\glslang" />
+        <Touch Files="$(IntermediateOutputPath)\glslang\update_source.receipt" AlwaysCreate="true"/>
+
+        <ItemGroup>
+            <!-- Now that we have all the sources files in place, we can determine the source file items. -->
+            <GlslangSrcFile Include="$(GlslangSourceDir)**\*" />
+        </ItemGroup>
+    </Target>
+    
+    <ItemGroup>
+        <GlslangBinary Include="glslangValidator" Visible="False"/>
+        <!-- Additional binaries to package can be listed here -->
+    </ItemGroup>
+    
+    <ItemGroup>
+        <GlslangOutputFile Include="@(GlslangBinary)">
+            <FilenameToCopy>%(GlslangOutputFile.Identity)@(BuildableRid -> '%(ExecutableExtension)')</FilenameToCopy>
+            <TaskOutput>@(BuildableRid -> '$(MSBuildThisFileDirectory)runtimes\%(Identity)')\native\%(FilenameToCopy)</TaskOutput>
+            <Rid>@(BuildableRid)</Rid>
+        </GlslangOutputFile>
+    </ItemGroup>
+
+    <Target Name="MakeGlslangSingular"
+            Inputs="@(GlslangSrcFile)"
+            Outputs="@(GlslangOutputFile -> '%(TaskOutput)')"
+    >
+        <PropertyGroup>
+            <ThisRid>%(GlslangOutputFile.Rid)</ThisRid>
+            <BuildDir>$(IntermediateOutputPath)glslang\</BuildDir>
+            <BuildOutputDir>$(BuildDir)%(GlslangOutputFile.Identity)\StandAlone\%(BuildableRid.BuildOutputDir)</BuildOutputDir>
+        </PropertyGroup>
+        
+        <PropertyGroup>
+            <CmakeOsxArchitectures />
+            <CmakeOsxArchitectures Condition="'%(GlslangOutputFile.Rid)' == 'osx-x64'">x86_64</CmakeOsxArchitectures>
+            <CmakeOsxArchitectures Condition="'%(GlslangOutputFile.Rid)' == 'osx-arm64'">arm64</CmakeOsxArchitectures>
+        </PropertyGroup>
+
+        <MakeDir Directories="$(BuildDir)" />
+        <Exec WorkingDirectory="$(BuildDir)" Command="cmake &quot;$(GlslangSourceDir.TrimEnd('\'))&quot; &quot;-DCMAKE_OSX_ARCHITECTURES=$(CmakeOsxArchitectures)&quot;" />
+        <!-- Don't use bare -j flag here. Their cmake file somehow causes too many processes to be spawned if a number is not also supplied. -->
+        <Exec WorkingDirectory="$(BuildDir)" Command="cmake --build . --config $(Configuration) -j$(ProcessorCount)" />
+
+        <MakeDir Directories="runtimes\$(ThisRid)\native\" />
+        <Copy
+            SourceFiles="$(BuildOutputDir)%(GlslangOutputFile.FilenameToCopy)"
+            DestinationFiles="%(GlslangOutputFile.TaskOutput)"
+        />
+
+        <ItemGroup>
+            <FileWrites Include="$(BuildDir)\**\*" />
+        </ItemGroup>
+    </Target>
+
+    <ItemGroup>
+        <SpirVCrossSrc Include="$(GlslangSourceDir)*.json"/>
+
+        <SpirVCrossBinary Include="spirv-cross" Visible="False"/>
+        <!-- Additional binaries to package can be listed here -->
+    </ItemGroup>
+
+    <ItemGroup>
+        <SpirVCrossOutputFile Include="@(SpirVCrossBinary)" Visible="False" >
+            <FilenameToCopy>%(SpirVCrossOutputFile.Identity)@(BuildableRid -> '%(ExecutableExtension)')</FilenameToCopy>
+            <TaskOutput>@(BuildableRid -> '$(MSBuildThisFileDirectory)runtimes\%(Identity)')\native\%(FilenameToCopy)</TaskOutput>
+            <Rid>@(BuildableRid)</Rid>
+        </SpirVCrossOutputFile>
+    </ItemGroup>
+
+    <Target Name="MakeSpirVCrossSingular"
+            Inputs="@(SpirVCrossSrc)"
+            Outputs="@(SpirVCrossOutputFile -> '%(TaskOutput)')"
+    >
+        <PropertyGroup>
+            <ThisRid>%(SpirVCrossOutputFile.Rid)</ThisRid>
+            <BuildDir>$(IntermediateOutputPath)SPIRV-Cross</BuildDir>
+            <BuildOutputDir>$(BuildDir)\%(SpirVCrossOutputFile.Identity)\%(BuildableRid.BuildOutputDir)</BuildOutputDir>
+        </PropertyGroup>
+
+        <PropertyGroup>
+            <CmakeOsxArchitectures />
+            <CmakeOsxArchitectures Condition="'%(BuildableRid.Identity)' == 'osx-x64'">x86_64</CmakeOsxArchitectures>
+            <CmakeOsxArchitectures Condition="'%(BuildableRid.Identity)' == 'osx-arm64'">arm64</CmakeOsxArchitectures>
+        </PropertyGroup>
+
+        <MakeDir Directories="$(BuildDir)" />
+        <Exec WorkingDirectory="$(BuildDir)" Command="cmake &quot;$(SpirVCrossSourceDir.TrimEnd('\'))&quot; &quot;-DCMAKE_OSX_ARCHITECTURES=$(CmakeOsxArchitectures)&quot;" />
+        <!-- Don't use bare -j flag here. Their cmake file somehow causes too many processes to be spawned if a number is not also supplied. -->
+        <Exec WorkingDirectory="$(BuildDir)" Command="cmake --build . --config $(Configuration) -j$(ProcessorCount)" />
+
+        <MakeDir Directories="runtimes\$(ThisRid)\native\" />
+        <Copy
+            SourceFiles="$(BuildOutputDir)%(SpirVCrossOutputFile.FilenameToCopy)"
+            DestinationFiles="%(SpirVCrossOutputFile.TaskOutput)"
+        />
+        
+        <ItemGroup>
+            <FileWrites Include="$(BuildDir)\**\*" />
+        </ItemGroup>
+    </Target>
+
+    <Target Name="MakeGgenTools" BeforeTargets="BeforeBuild;DispatchToInnerBuilds">
+        <!--TargetFramework=once is critical here, as msbuild will not execute a task from same project with same properties twice. -->
+        <MSBuild Projects="$(MSBuildProjectFile)" Targets="MakeGlslangSingular" Properties="TargetFramework=once" />
+        <MSBuild Projects="$(MSBuildProjectFile)" Targets="MakeSpirVCrossSingular" Properties="TargetFramework=once" />
+    </Target>
+    
+    <ItemGroup>
+        <None Include="runtimes\**\*">
+            <PackagePath>%(Identity)</PackagePath>
+            <Pack>true</Pack>
+        </None>
+    </ItemGroup>
+    
+</Project>
