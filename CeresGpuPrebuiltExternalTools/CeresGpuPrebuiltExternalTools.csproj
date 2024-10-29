@@ -14,6 +14,11 @@
         <Version>1.0</Version>
     </PropertyGroup>
     
+    <!-- Properties which can be set by the invoker -->
+    <PropertyGroup>
+        <SkipNativeBuilds>false</SkipNativeBuilds>
+    </PropertyGroup>
+    
     <PropertyGroup>
         <ProcessorCount>$([System.Environment]::ProcessorCount)</ProcessorCount>
     </PropertyGroup>
