@@ -80,7 +80,7 @@ jobs:
           cp -r "artifacts/runtimes-osx-x64/" "runtimes/"
           cp -r "artifacts/runtimes-osx-arm64/" "runtimes/"
           ls -R runtimes
-          dotnet pack -c Release
+          dotnet pack -c Release -p:SkipNativeBuilds=true
 
       - name: Upload Package as Artifact
         uses: actions/upload-artifact@v4

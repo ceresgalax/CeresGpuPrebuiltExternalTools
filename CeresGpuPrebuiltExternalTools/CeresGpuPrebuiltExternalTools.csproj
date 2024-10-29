@@ -76,7 +76,7 @@
         <!-- Additional binaries to package can be listed here -->
     </ItemGroup>
     
-    <Target Name="_ComputeGlslangOutputFiles" BeforeTargets="MakeGlslangSingular">
+    <Target Name="_ComputeGlslangOutputFiles" BeforeTargets="MakeGlslangSingular" Condition="!$(SkipNativeBuilds)">
         <ItemGroup>
             <!-- This needs to be done inside of a task, so that the task can run for each element of the factor item. -->
             <!-- MSBuild quirk.. In order to do a cartesian product of GlslangBinary x BuildableRid, each metadata must only contain the factor item. Obvious, right? :) -->
@@ -99,6 +99,7 @@
     <Target Name="MakeGlslangSingular"
             Inputs="@(GlslangSrcFile)"
             Outputs="@(GlslangOutputFile -> '%(TaskOutput)')"
+            Condition="!$(SkipNativeBuilds)"
     >
         <PropertyGroup>
             <ThisRid>%(GlslangOutputFile.Rid)</ThisRid>
@@ -136,7 +137,7 @@
         <!-- Additional binaries to package can be listed here -->
     </ItemGroup>
 
-    <Target Name="_ComputeSpirVCrossOutputFiles" BeforeTargets="MakeSpirVCrossSingular">
+    <Target Name="_ComputeSpirVCrossOutputFiles" BeforeTargets="MakeSpirVCrossSingular" Condition="!$(SkipNativeBuilds)">
         <ItemGroup>
             <!-- This needs to be done inside of a task, so that the task can run for each element of the factor item. -->
             <!-- MSBuild quirk.. In order to do a cartesian product of GlslangBinary x BuildableRid, each metadata must only contain the factor item. Obvious, right? :) -->
@@ -159,6 +160,7 @@
     <Target Name="MakeSpirVCrossSingular"
             Inputs="@(SpirVCrossSrc)"
             Outputs="@(SpirVCrossOutputFile -> '%(TaskOutput)')"
+            Condition="!$(SkipNativeBuilds)"
     >
         <PropertyGroup>
             <ThisRid>%(SpirVCrossOutputFile.Rid)</ThisRid>
@@ -189,7 +191,7 @@
         </ItemGroup>
     </Target>
 
-    <Target Name="MakeGgenTools" BeforeTargets="BeforeBuild;DispatchToInnerBuilds">
+    <Target Name="MakeGgenTools" BeforeTargets="BeforeBuild;DispatchToInnerBuilds" Condition="!$(SkipNativeBuilds)">
         <!--TargetFramework=once is critical here, as msbuild will not execute a task from same project with same properties twice. -->
         <MSBuild Projects="$(MSBuildProjectFile)" Targets="MakeGlslangSingular" Properties="TargetFramework=once" />
         <MSBuild Projects="$(MSBuildProjectFile)" Targets="MakeSpirVCrossSingular" Properties="TargetFramework=once" />
