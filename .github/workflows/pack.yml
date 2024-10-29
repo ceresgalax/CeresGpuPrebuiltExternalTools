@@ -35,7 +35,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: '*/obj/'
-          key: '${{ matrix.os }}'
+          key: '${{ matrix.rid }}'
       
       - name: Build Packages
         shell: bash
@@ -44,7 +44,7 @@ jobs:
           dotnet build -c Release
 
       - name: Upload Binary as Artifact
-        uses: actions/upload-artifact@v3.1.1
+        uses: actions/upload-artifact@v4
         with:
           name: 'runtimes-${{ matrix.rid }}'
           # A file, directory or wildcard pattern that describes what to upload
@@ -66,7 +66,7 @@ jobs:
           dotnet-version: 8.0.x
       
       - name: Pull Artifacts
-        uses: actions/download-artifact@v3.0.1
+        uses: actions/download-artifact@v4
         with:
           # Destination path
           path: '${{ github.workspace }}/artifacts'
@@ -76,14 +76,14 @@ jobs:
         run: |
           cd "${GITHUB_WORKSPACE}"
           ls -R artifacts
-          cp -r "artifacts/lib-win-x64/runtimes/" "runtimes/"
-          cp -r "artifacts/lib-osx-x64/runtimes/" "runtimes/"
-          cp -r "artifacts/lib-osx-arm64/runtimes/" "runtimes/"
+          cp -r "artifacts/runtimes-win-x64/" "runtimes/"
+          cp -r "artifacts/runtimes-osx-x64/" "runtimes/"
+          cp -r "artifacts/runtimes-osx-arm64/" "runtimes/"
           ls -R runtimes
           dotnet pack -c Release
 
       - name: Upload Package as Artifact
-        uses: actions/upload-artifact@v3.1.1
+        uses: actions/upload-artifact@v4
         with:
           # Artifact name
           name: 'nuget_package' # optional, default is artifact
