@@ -30,12 +30,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-          
-      - name: Caching for intermediates
-        uses: actions/cache@v4
-        with:
-          path: '*/obj/'
-          key: '${{ matrix.rid }}'
       
       - name: Build Packages
         shell: bash
