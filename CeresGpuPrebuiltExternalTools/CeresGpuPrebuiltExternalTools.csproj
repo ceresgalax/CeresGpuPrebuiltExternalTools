@@ -39,10 +39,16 @@
         <BuildableRid Include="win-x64">
             <BuildOutputDir>$(Configuration)\</BuildOutputDir>
             <ExecutableExtension>.exe</ExecutableExtension>
+            <ExecutableNugetExtension>%(ExecutableExtension)</ExecutableNugetExtension>
         </BuildableRid>
         <BuildableRid Include="osx-x64;osx-arm64">
             <BuildOutputDir />
             <ExecutableExtension />
+            <!-- 
+                NuGet can't package extensionless files correctly :/
+                https://github.com/NuGet/Home/issues/6351
+            -->
+            <ExecutableNugetExtension>.bin</ExecutableNugetExtension>
         </BuildableRid>
     </ItemGroup>
     
@@ -88,6 +94,7 @@
             <!-- MSBuild quirk.. In order to do a cartesian product of GlslangBinary x BuildableRid, each metadata must only contain the factor item. Obvious, right? :) -->
             <GlslangOutputFileCombined Include="@(GlslangBinary)">
                 <ExecutableExtension>%(BuildableRid.ExecutableExtension)</ExecutableExtension>
+                <ExecutableNugetExtension>%(BuildableRid.ExecutableNugetExtension)</ExecutableNugetExtension>
                 <Rid>%(BuildableRid.Identity)</Rid>
                 <OutputConfigurationDir>%(BuildableRid.BuildOutputDir)</OutputConfigurationDir>
             </GlslangOutputFileCombined>
@@ -96,7 +103,7 @@
         <ItemGroup>
             <GlslangOutputFile Include="@(GlslangOutputFileCombined)" Condition="$(RidsToBuild.Contains(';%(Rid);'))">
                 <FilenameToCopy>%(Identity)%(ExecutableExtension)</FilenameToCopy>
-                <TaskOutput>$(MSBuildThisFileDirectory)runtimes\%(Rid)\native\%(GlslangOutputFile.FilenameToCopy)</TaskOutput>
+                <TaskOutput>$(MSBuildThisFileDirectory)runtimes\%(Rid)\native\%(Identity)%(ExecutableNugetExtension)</TaskOutput>
                 <InternalOutputDir>StandAlone\%(OutputConfigurationDir)</InternalOutputDir>
             </GlslangOutputFile>
         </ItemGroup>
@@ -149,6 +156,7 @@
             <!-- MSBuild quirk.. In order to do a cartesian product of GlslangBinary x BuildableRid, each metadata must only contain the factor item. Obvious, right? :) -->
             <SpirVCrossOutputFileCombined Include="@(SpirVCrossBinary)">
                 <ExecutableExtension>%(BuildableRid.ExecutableExtension)</ExecutableExtension>
+                <ExecutableNugetExtension>%(BuildableRid.ExecutableNugetExtension)</ExecutableNugetExtension>
                 <Rid>%(BuildableRid.Identity)</Rid>
                 <OutputConfigurationDir>%(BuildableRid.BuildOutputDir)</OutputConfigurationDir>
             </SpirVCrossOutputFileCombined>
@@ -157,7 +165,7 @@
         <ItemGroup>
             <SpirVCrossOutputFile Include="@(SpirVCrossOutputFileCombined)" Condition="$(RidsToBuild.Contains(';%(Rid);'))">
                 <FilenameToCopy>%(Identity)%(ExecutableExtension)</FilenameToCopy>
-                <TaskOutput>$(MSBuildThisFileDirectory)runtimes\%(Rid)\native\%(SpirVCrossOutputFile.FilenameToCopy)</TaskOutput>
+                <TaskOutput>$(MSBuildThisFileDirectory)runtimes\%(Rid)\native\%(Identity)%(ExecutableNugetExtension)</TaskOutput>
                 <InternalOutputDir>%(OutputConfigurationDir)</InternalOutputDir>
             </SpirVCrossOutputFile>
         </ItemGroup>
