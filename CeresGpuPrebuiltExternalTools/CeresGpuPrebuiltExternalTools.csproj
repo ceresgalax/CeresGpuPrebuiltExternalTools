@@ -24,15 +24,14 @@
     </PropertyGroup>
     
     <!-- By defualt, only build the rid that matches the host. -->
-    <PropertyGroup Condition="'$(RidsToBuild)' == ''">
+    <PropertyGroup>
         <CurrentOs Condition="$([MSBuild]::IsOSPlatform('Windows'))">win</CurrentOs>
         <CurrentOs Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</CurrentOs>
         <CurrentArch>$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLower())</CurrentArch>
         <RidsToBuild>$(CurrentOs)-$(CurrentArch)</RidsToBuild>
-    </PropertyGroup>
-    <PropertyGroup>
+
         <!-- Surround by semicolons so that we can check which rid items can be included below. -->
-        <RidsToBuild>;$(RidsToBuild);</RidsToBuild>
+        <_RidsToBuildDelimited>;$(RidsToBuild);</_RidsToBuildDelimited>
     </PropertyGroup>
     
     <ItemGroup>
@@ -99,9 +98,9 @@
                 <OutputConfigurationDir>%(BuildableRid.BuildOutputDir)</OutputConfigurationDir>
             </GlslangOutputFileCombined>
         </ItemGroup>
-        
+
         <ItemGroup>
-            <GlslangOutputFile Include="@(GlslangOutputFileCombined)" Condition="$(RidsToBuild.Contains(';%(Rid);'))">
+            <GlslangOutputFile Include="@(GlslangOutputFileCombined)" Condition="$(_RidsToBuildDelimited.Contains(';%(Rid);'))">
                 <FilenameToCopy>%(Identity)%(ExecutableExtension)</FilenameToCopy>
                 <TaskOutput>$(MSBuildThisFileDirectory)runtimes\%(Rid)\native\%(Identity)%(ExecutableNugetExtension)</TaskOutput>
                 <InternalOutputDir>StandAlone\%(OutputConfigurationDir)</InternalOutputDir>
