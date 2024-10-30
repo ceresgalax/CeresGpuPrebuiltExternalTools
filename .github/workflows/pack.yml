@@ -35,7 +35,7 @@ jobs:
         shell: bash
         run: |
           rm -r CeresGpuPrebuiltExternalTools/runtimes
-          dotnet build -c Release
+          dotnet build -c Release -p:RidsToBuild=${{ matrix.rid }}
 
       - name: Upload Binary as Artifact
         uses: actions/upload-artifact@v4
