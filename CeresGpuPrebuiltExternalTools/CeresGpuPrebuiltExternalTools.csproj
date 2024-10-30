@@ -121,8 +121,8 @@
         
         <PropertyGroup>
             <CmakeOsxArchitectures />
-            <CmakeOsxArchitectures Condition="'%(GlslangOutputFile.Rid)' == 'osx-x64'">x86_64</CmakeOsxArchitectures>
-            <CmakeOsxArchitectures Condition="'%(GlslangOutputFile.Rid)' == 'osx-arm64'">arm64</CmakeOsxArchitectures>
+            <CmakeOsxArchitectures Condition="'$(ThisRid)' == 'osx-x64'">x86_64</CmakeOsxArchitectures>
+            <CmakeOsxArchitectures Condition="'$(ThisRid)' == 'osx-arm64'">arm64</CmakeOsxArchitectures>
         </PropertyGroup>
 
         <MakeDir Directories="$(BuildDir)" />
@@ -183,8 +183,8 @@
 
         <PropertyGroup>
             <CmakeOsxArchitectures />
-            <CmakeOsxArchitectures Condition="'%(BuildableRid.Identity)' == 'osx-x64'">x86_64</CmakeOsxArchitectures>
-            <CmakeOsxArchitectures Condition="'%(BuildableRid.Identity)' == 'osx-arm64'">arm64</CmakeOsxArchitectures>
+            <CmakeOsxArchitectures Condition="'$(ThisRid)' == 'osx-x64'">x86_64</CmakeOsxArchitectures>
+            <CmakeOsxArchitectures Condition="'$(ThisRid)' == 'osx-arm64'">arm64</CmakeOsxArchitectures>
         </PropertyGroup>
 
         <MakeDir Directories="$(BuildDir)" />
