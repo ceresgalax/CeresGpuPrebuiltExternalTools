@@ -162,7 +162,7 @@
         </ItemGroup>
 
         <ItemGroup>
-            <SpirVCrossOutputFile Include="@(SpirVCrossOutputFileCombined)" Condition="$(RidsToBuild.Contains(';%(Rid);'))">
+            <SpirVCrossOutputFile Include="@(SpirVCrossOutputFileCombined)" Condition="$(_RidsToBuildDelimited.Contains(';%(Rid);'))">
                 <FilenameToCopy>%(Identity)%(ExecutableExtension)</FilenameToCopy>
                 <TaskOutput>$(MSBuildThisFileDirectory)runtimes\%(Rid)\native\%(Identity)%(ExecutableNugetExtension)</TaskOutput>
                 <InternalOutputDir>%(OutputConfigurationDir)</InternalOutputDir>
