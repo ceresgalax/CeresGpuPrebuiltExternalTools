@@ -71,10 +71,11 @@ jobs:
           cd "${GITHUB_WORKSPACE}"
           ls -R artifacts
           rm -r CeresGpuPrebuiltExternalTools/runtimes/
-          cp -r "artifacts/runtimes-win-x64/" "CeresGpuPrebuiltExternalTools/runtimes/"
-          cp -r "artifacts/runtimes-osx-x64/" "CeresGpuPrebuiltExternalTools/runtimes/"
-          cp -r "artifacts/runtimes-osx-arm64/" "CeresGpuPrebuiltExternalTools/runtimes/"
-          ls -R CeresGpuPrebuiltExternalTools/runtimes
+          mkdir CeresGpuPrebuiltExternalTools/runtimes/
+          mv "artifacts/runtimes-win-x64/win-x64" "CeresGpuPrebuiltExternalTools/runtimes/win-x64"
+          mv "artifacts/runtimes-osx-x64/osx-x64" "CeresGpuPrebuiltExternalTools/runtimes/osx-x64"
+          mv "artifacts/runtimes-osx-arm64/osx-arm64" "CeresGpuPrebuiltExternalTools/runtimes/osx-arm64"
+          ls -R CeresGpuPrebuiltExternalTools/runtimes/
           dotnet pack -c Release -p:SkipNativeBuilds=true
 
       - name: Upload Package as Artifact
