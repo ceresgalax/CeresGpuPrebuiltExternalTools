@@ -11,7 +11,7 @@
         
         <PackageId>CeresGpuPrebuiltExternalTools</PackageId>
         <PackageProjectUrl>https://github.com/ceresgalax/CeresGpuPrebuiltExternalTools</PackageProjectUrl>
-        <Version>1.0.2</Version>
+        <Version>1.1.0</Version>
     </PropertyGroup>
     
     <!-- Properties which can be set by the invoker -->
@@ -83,19 +83,33 @@
     </Target>
     
     <ItemGroup>
-        <GlslangBinary Include="glslangValidator" Visible="False"/>
+        <GlslangBinary Include="glslangValidator" Visible="False">
+            <InternalOutputPrefixDir>StandAlone\</InternalOutputPrefixDir>
+        </GlslangBinary>
+        <GlslangBinary Include="spirv-link" Visible="False">
+            <InternalOutputPrefixDir>External\spirv-tools\tools\</InternalOutputPrefixDir>
+        </GlslangBinary>
         <!-- Additional binaries to package can be listed here -->
     </ItemGroup>
     
-    <Target Name="_ComputeGlslangOutputFiles" BeforeTargets="MakeGlslangSingular" Condition="!$(SkipNativeBuilds)">
+    <Target Name="_ComputeGlslangOutputFiles" BeforeTargets="MakeGlslangSingular" Condition="!$(SkipNativeBuilds)" Outputs="%(BuildableRid.Identity)">
+        <PropertyGroup>
+            <CurrentRid>%(BuildableRid.Identity)</CurrentRid>
+            <RidExecutableExtension>%(BuildableRid.ExecutableExtension)</RidExecutableExtension>
+            <RidExecutableNugetExtension>%(BuildableRid.ExecutableNugetExtension)</RidExecutableNugetExtension>
+            <RidBuildOutputDir>%(BuildableRid.BuildOutputDir)</RidBuildOutputDir>
+        </PropertyGroup>
+
+        <Message Importance="high" Text="Hello!!! $(CurrentRid)"/>
+        
         <ItemGroup>
             <!-- This needs to be done inside of a task, so that the task can run for each element of the factor item. -->
             <!-- MSBuild quirk.. In order to do a cartesian product of GlslangBinary x BuildableRid, each metadata must only contain the factor item. Obvious, right? :) -->
             <GlslangOutputFileCombined Include="@(GlslangBinary)">
-                <ExecutableExtension>%(BuildableRid.ExecutableExtension)</ExecutableExtension>
-                <ExecutableNugetExtension>%(BuildableRid.ExecutableNugetExtension)</ExecutableNugetExtension>
-                <Rid>%(BuildableRid.Identity)</Rid>
-                <OutputConfigurationDir>%(BuildableRid.BuildOutputDir)</OutputConfigurationDir>
+                <ExecutableExtension>$(RidExecutableExtension)</ExecutableExtension>
+                <ExecutableNugetExtension>$(RidExecutableNugetExtension)</ExecutableNugetExtension>
+                <Rid>$(CurrentRid)</Rid>
+                <OutputConfigurationDir>%(InternalOutputPrefixDir)$(RidBuildOutputDir)</OutputConfigurationDir>
             </GlslangOutputFileCombined>
         </ItemGroup>
 
@@ -103,9 +117,11 @@
             <GlslangOutputFile Include="@(GlslangOutputFileCombined)" Condition="$(_RidsToBuildDelimited.Contains(';%(Rid);'))">
                 <FilenameToCopy>%(Identity)%(ExecutableExtension)</FilenameToCopy>
                 <TaskOutput>$(MSBuildThisFileDirectory)runtimes\%(Rid)\native\%(Identity)%(ExecutableNugetExtension)</TaskOutput>
-                <InternalOutputDir>StandAlone\%(OutputConfigurationDir)</InternalOutputDir>
+                <InternalOutputDir>%(OutputConfigurationDir)</InternalOutputDir>
             </GlslangOutputFile>
         </ItemGroup>
+        
+        <Message Importance="high" Text="Hello! @(GlslangOutputFile -> '--%(InternalOutputDir)')"/>
     </Target>
     
     <Target Name="MakeGlslangSingular"
@@ -113,10 +129,12 @@
             Outputs="@(GlslangOutputFile -> '%(TaskOutput)')"
             Condition="!$(SkipNativeBuilds)"
     >
+        <Message Importance="high" Text="@(GlslangOutputFile -> '%(Identity)')" />
+        
         <PropertyGroup>
             <ThisRid>%(GlslangOutputFile.Rid)</ThisRid>
             <BuildDir>$(IntermediateOutputPath)glslang\</BuildDir>
-            <BuildOutputDir>$(BuildDir)%(GlslangOutputFile.InternalOutputDir)</BuildOutputDir>
+<!--            <BuildOutputDir>$(BuildDir)%(GlslangOutputFile.InternalOutputDir)</BuildOutputDir>-->
         </PropertyGroup>
         
         <PropertyGroup>
@@ -132,7 +150,7 @@
 
         <MakeDir Directories="runtimes\$(ThisRid)\native\" />
         <Copy
-            SourceFiles="@(GlslangOutputFile -> '$(BuildOutputDir)%(FilenameToCopy)')"
+            SourceFiles="@(GlslangOutputFile -> '$(BuildDir)%(InternalOutputDir)%(FilenameToCopy)')"
             DestinationFiles="%(GlslangOutputFile.TaskOutput)"
         />
 
