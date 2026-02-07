@@ -20,6 +20,8 @@ jobs:
             os: macOS-14
           - rid: osx-arm64
             os: macOS-14
+          - rid: linux-x64
+            os: ubuntu-slim
 
     steps:
       - uses: actions/checkout@v4
@@ -75,6 +77,7 @@ jobs:
           mv "artifacts/runtimes-win-x64/win-x64" "CeresGpuPrebuiltExternalTools/runtimes/win-x64"
           mv "artifacts/runtimes-osx-x64/osx-x64" "CeresGpuPrebuiltExternalTools/runtimes/osx-x64"
           mv "artifacts/runtimes-osx-arm64/osx-arm64" "CeresGpuPrebuiltExternalTools/runtimes/osx-arm64"
+          mv "artifacts/runtimes-linux-x64/linux-x64" "CeresGpuPrebuiltExternalTools/runtimes/linux-x64"
           ls -R CeresGpuPrebuiltExternalTools/runtimes/
           dotnet pack -c Release -p:SkipNativeBuilds=true
 

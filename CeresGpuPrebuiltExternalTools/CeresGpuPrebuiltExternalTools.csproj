@@ -11,7 +11,7 @@
         
         <PackageId>CeresGpuPrebuiltExternalTools</PackageId>
         <PackageProjectUrl>https://github.com/ceresgalax/CeresGpuPrebuiltExternalTools</PackageProjectUrl>
-        <Version>1.1.0</Version>
+        <Version>1.2.0</Version>
     </PropertyGroup>
     
     <!-- Properties which can be set by the invoker -->
@@ -27,6 +27,7 @@
     <PropertyGroup>
         <CurrentOs Condition="$([MSBuild]::IsOSPlatform('Windows'))">win</CurrentOs>
         <CurrentOs Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</CurrentOs>
+        <CurrentOs Condition="$([MSBuild]::IsOSPlatform('Linux'))">linux</CurrentOs>
         <CurrentArch>$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLower())</CurrentArch>
         <RidsToBuild>$(CurrentOs)-$(CurrentArch)</RidsToBuild>
 
@@ -44,6 +45,15 @@
             <BuildOutputDir />
             <ExecutableExtension />
             <!-- 
+                NuGet can't package extensionless files correctly :/
+                https://github.com/NuGet/Home/issues/6351
+            -->
+            <ExecutableNugetExtension>.bin</ExecutableNugetExtension>
+        </BuildableRid>
+        <BuildableRid Include="linux-x64">
+            <BuildOutputDir />
+            <ExecutableExtension />
+            <!--
                 NuGet can't package extensionless files correctly :/
                 https://github.com/NuGet/Home/issues/6351
             -->
