@@ -21,7 +21,7 @@ jobs:
           - rid: osx-arm64
             os: macOS-14
           - rid: linux-x64
-            os: ubuntu-slim
+            os: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
